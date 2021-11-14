@@ -13,6 +13,7 @@ class User(BaseModel):
 
     id: UUID = Field(
         default_factory=uuid4,
+        unique=True,
         title="Id",
         description="The unique identifier for the user.",
         )
@@ -68,12 +69,12 @@ class User(BaseModel):
         schema_extra = {
             "example": {
                 "email": "my_email@domain.com",
-                "password": "myp@ss159753",
                 "first_name": "Jhon",
                 "last_name": "Doe",
                 "born_date": "2020-01-01",
             }
         }
+
 
 
 class UserIn(User):
@@ -86,16 +87,22 @@ class UserIn(User):
         description="The password of the user.",
         )
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "my_email@domain.com",
+                "password": "myp@ss159753",
+                "first_name": "Jhon",
+                "last_name": "Doe",
+                "born_date": "2020-01-01",
+            }
+        }
+
+
 
 class UserOut(User):
     # Used to return a user
     pass
-
-
-class UserRegister(UserIn, User):
-    # Used to create a new user in db
-    pass
-
 
 
 
