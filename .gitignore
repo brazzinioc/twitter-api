@@ -143,6 +143,7 @@ dmypy.json
 cython_debug/
 
 .vscode/
-users.json
-tweets.json
+./app/users.json
+./app/tweets.json
+./app/.env
 # End of https://www.toptal.com/developers/gitignore/api/python
