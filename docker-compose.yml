@@ -1,0 +1,27 @@
+version: "3.0"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: twitter-api
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    networks:
+      - api
+
+  nginx:
+    image: nginx:1
+    container_name: twitter-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - api
+
+networks:
+  api:
+    driver: bridge

@@ -3,6 +3,7 @@ import uvicorn
 import json
 from typing import List
 from uuid import UUID
+import os
 
 from config import APP_NAME, HOST, PORT, DEBUG
 
@@ -53,7 +54,8 @@ def singup(user: UserIn = Body(...)):
         - **created_at:** datetime  
         - **updated_at:** datetime
     """
-
+    print("current path")
+    print(os.getcwd())
     with open("users.json", "r+", encoding="utf-8") as f:
         results = json.loads(f.read())  # lista de diccionarios
 
@@ -458,6 +460,7 @@ def delete_a_tweet():
     pass
 '''
 
+'''
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
@@ -469,3 +472,4 @@ if __name__ == "__main__":
         debug=bool(DEBUG),
     )
     print("Starting server...")
+'''
