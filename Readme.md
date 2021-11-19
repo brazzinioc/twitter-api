@@ -1,22 +1,19 @@
 # TWITTER API
-
-Twitter API simulation with Python - FastAPI.
+A basic API REST based on Twitter API with Python and FastAPI.
 
 ## DEVELOPMENT
-1. Activate virtual environment with the command:  
-    ```bash
-      source ./venv/bin/activate
-    ```
 
-2. Start project with the command:
-    ```bash
-      python3 main.py
-    ```
-This project use [Pipreqs](https://github.com/bndr/pipreqs) for generate `requirements.txt` file, execute this command:  
+- Up dev containers with:
   ```bash
-    pipreqs .
+    docker-compose up -d
+  ```
+- Follow logs with:
+  ```bash
+    docker logs twitter-api --follow
   ```
 
-## PRODUCTION
+- Type `http://localhost:8080/docs` from your browser. 
 
+## PRODUCTION
+ - Soon
 
