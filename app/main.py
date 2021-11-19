@@ -5,7 +5,7 @@ from typing import List
 from uuid import UUID
 import os
 
-from config import APP_NAME, HOST, PORT, DEBUG
+from config import APP_NAME
 
 from fastapi import FastAPI, status, Body, Form, Path, HTTPException
 from passlib.context import CryptContext
@@ -14,6 +14,9 @@ from passlib.context import CryptContext
 from models import User, UserIn, UserOut
 from models import Tweet
 
+# Helpers
+from helpers import verifyUser, verifyJsonDb
+
 # for password hash and verify
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -21,6 +24,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI(title=APP_NAME)
 
+verifyJsonDb(["users", "tweets"] ) # create JSON files if not exists
 
 
 # Path Operations
@@ -37,12 +41,12 @@ app = FastAPI(title=APP_NAME)
 )
 def singup(user: UserIn = Body(...)):
     """
-    **SINGUP**
+    **SINGUP**  
     This path operation register a User in the app.
 
     **Parameters:**  
         - Request body parameter  
-        - user: UserIn  
+        - **user:** UserIn  
         
     **Return:**  
     A json with the basic user information.  
@@ -54,8 +58,6 @@ def singup(user: UserIn = Body(...)):
         - **created_at:** datetime  
         - **updated_at:** datetime
     """
-    print("current path")
-    print(os.getcwd())
     with open("users.json", "r+", encoding="utf-8") as f:
         results = json.loads(f.read())  # lista de diccionarios
 
@@ -181,10 +183,10 @@ def show_a_user(user_id: UUID = Path(...)):
     """
     **SHOW A USER**  
     This path operation show a active user in the app.  
-    
+
     **Parameters:**  
         - Path parameter
-        - user_id: uuid
+        - **user_id:** uuid
         
     **Return:**  
     A json with User information.  
@@ -204,11 +206,11 @@ def show_a_user(user_id: UUID = Path(...)):
                 if u["id"] == str(user_id) and u["deleted_at"] is None:
                     return UserOut(id=u["id"], email=u['email'], first_name=u["first_name"], last_name=u["last_name"], born_date=u["born_date"], created_at=u["created_at"], updated_at=u["updated_at"], deleted_at=u["deleted_at"])
     
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-            headers={"X-Error": "User not found"}
-        )
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="User not found",
+        headers={"X-Error": "User not found"}
+    )
 
 
 ### Update a User
@@ -228,9 +230,9 @@ def update_a_user(
     This path operation update a active user in the app.  
     
     **Parameters:**  
-        - Path parameter and Request Body
-        - user_id: uuid  
-        - user: User
+        - Path parameter and Request Body  
+        - **user_id:** uuid  
+        - **user:** User
         
     **Return:**  
     A json with User information.  
@@ -292,8 +294,8 @@ def delete_a_user(user_id: UUID = Path(...)):
     This path operation delete a active user in the app.  
     
     **Parameters:**  
-        - Path parameter
-        - user_id: uuid
+        - Path parameter  
+        - **user_id:** uuid
         
     **Return:**  
     A json with User information.  
@@ -338,37 +340,6 @@ def delete_a_user(user_id: UUID = Path(...)):
 
 ## Tweets
 
-### Show all Tweets
-'''
-@app.get(
-    path="/",
-    response_model=List[Tweet],
-    status_code=status.HTTP_200_OK,
-    summary="Show all Tweets",
-    tags=["Tweets"],
-)
-def show_all_tweets() -> List[Tweet]:
-    """
-    Show Tweets
-
-    This path operation show all Tweets in the app.
-
-    Parameters:
-      -
-
-    Returns a json list with all Users.
-      - id: UUID
-      - content: str
-      - created_at: datetime
-      - updated_at: Optional[datetime]
-      - created_by: user
-    """
-    with open("tweets.json", "r", encoding="utf-8") as f:
-        results = json.loads(f.read())  # lista de diccionarios
-
-        return results
-
-
 ### Register a Tweet
 @app.post(
     path="/tweets",
@@ -379,49 +350,83 @@ def show_all_tweets() -> List[Tweet]:
 )
 def create_a_tweet(tweet: Tweet = Body(...)):
     """
-    Create a Tweet
+    **CREATE A TWEET**  
+    This path operation create a Tweet in the app.  
+    
+    **Parameters:**  
+        - Request body parameter  
+        - **tweet:** Tweet  
+        - **created_by:** uuid
 
-    This path operation create a Tweet in the app.
-
-    Parameters:
-      - Request body parameter
-        - tweet: Tweet
-
-    Returns a json with the basic tweet information.
-
-      - id: UUID
-      - content: str
-      - created_at: datetime
-      - updated_at: Optional[datetime]
-      - created_by: User
+    **Return:**  
+    A json with the basic tweet information.  
+        - **id:** uuid  
+        - **content:** str  
+        - **created_by:** uuid  
+        - **created_at:** datetime  
+        - **updated_at:** datetime  
+        - **deleted_at:** datetime
     """
 
-    with open("tweets.json", "r+", encoding="utf-8") as f:
+    if verifyUser(tweet.created_by):
+        with open("tweets.json", "r+", encoding="utf-8") as f:
+            results = json.loads(f.read())  # lista de diccionarios
+
+            tweet_dict = tweet.dict()
+            tweet_dict["id"] = str(tweet_dict["id"])
+            tweet_dict["created_at"] = str(tweet_dict["created_at"])
+            tweet_dict["created_by"] = str(tweet_dict["created_by"])
+            results.append(tweet_dict)
+
+            f.seek(0)
+            f.write(json.dumps(results))
+
+            return tweet
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Unauthorized",
+        headers={"X-Error": "Unauthorized"}
+    )
+
+
+
+### Show all Tweets
+@app.get(
+    path="/tweets",
+    response_model=List[Tweet],
+    status_code=status.HTTP_200_OK,
+    summary="Show all Tweets",
+    tags=["Tweets"],
+)
+def show_all_tweets() -> List[Tweet]:
+    """
+    **SHOW ALL TWEETS**  
+    This path operation show all Tweets in the app.  
+    
+    **Parameters:**  
+        - 
+        
+    **Return:**  
+    A json list with all Tweets.  
+        - **id:** uuid  
+        - **content:** str  
+        - **created_by:** uuid  
+        - **created_at:** datetime  
+        - **updated_at:** datetime  
+        - **deleted_at:** datetime
+    """
+    with open("tweets.json", "r", encoding="utf-8") as f:
         results = json.loads(f.read())  # lista de diccionarios
+        tweets = []
 
-        tweet_dict = tweet.dict()  # crea un nuevo diccionario
-        tweet_dict["id"] = str(tweet_dict["id"])  # convierte el id a string
-        tweet_dict["created_at"] = str(
-            tweet_dict["created_at"]
-        )  # convierte la fecha a string
+        if len(results) > 0:
+            for t in results:
+                if t["deleted_at"] is None:
+                    tweets.append(t)
 
-        # cast User data. Without this cast the app show an error
-        tweet_dict["created_by"]["id"] = str(
-            tweet_dict["created_by"]["id"]
-        )  # convierte el id a string
-        tweet_dict["created_by"]["birthday"] = str(
-            tweet_dict["created_by"]["birthday"]
-        )  # convierte la fecha a string
+        return tweets
 
-        if tweet_dict["updated_at"] is not None:
-            tweet_dict["updated_at"] = str(tweet_dict["updated_at"])
-
-        results.append(tweet_dict)
-
-        f.seek(0)  # posiciona el cursor al inicio del archivo
-        f.write(json.dumps(results))  # escribe el json en la posicion del cursor
-
-        return tweet
 
 
 ### Show a Tweet
@@ -432,8 +437,45 @@ def create_a_tweet(tweet: Tweet = Body(...)):
     summary="Show a Tweet",
     tags=["Tweets"],
 )
-def show_a_tweet():
-    pass
+def show_a_tweet(tweet_id: UUID = Path(...)):
+    """
+    **SHOW A TWEET**  
+    This path operation show a Tweet in the app.  
+    
+    **Parameters:**  
+        - Path parameter  
+        - **tweet_id:** uuid  
+    
+    **Return:**  
+    A json with the basic tweet information.  
+        - **id:** uuid  
+        - **content:** str  
+        - **created_by:** uuid  
+        - **created_at:** datetime  
+        - **updated_at:** datetime  
+        - **deleted_at:** datetime
+    """
+    with open("tweets.json", "r", encoding="utf-8") as f:
+        tweets = json.loads(f.read())
+
+        if len(tweets) > 0:
+            for t in tweets:
+                if t["id"] == str(tweet_id):
+                    return Tweet(id=t["id"], 
+                                content=t["content"], 
+                                created_by=t["created_by"], 
+                                created_at=t["created_at"], 
+                                updated_at=t["updated_at"], 
+                                deleted_at=t["deleted_at"]
+                            )
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Tweet not found",
+        headers={"X-Error": "Tweet not found"}
+    )
+
+
 
 
 ### Update a Tweet
@@ -444,8 +486,55 @@ def show_a_tweet():
     summary="Update a Tweet",
     tags=["Tweets"],
 )
-def update_a_tweet():
-    pass
+def update_a_tweet(
+    tweet_id: UUID = Path(...),
+    tweet: Tweet = Body(...),
+    ):
+    """
+    **UPDATE A TWEET**  
+    This path operation update a active tweet in the app.  
+    
+    **Parameters:**  
+        - Path parameter and Request Body  
+        - **tweet_id:** uuid  
+        - **tweet:** Tweet
+        
+    **Return:**  
+    A json with User information.  
+        - **id:** uuid  
+        - **content:** str  
+        - **created_by:** uuid  
+        - **created_at:** datetime  
+        - **updated_at:** datetime  
+        - **deleted_at:** datetime
+    """
+    with open("tweets.json", "r+", encoding="utf-8") as f:
+        tweets = json.loads(f.read())
+
+        if len(tweets) > 0:
+            for t in tweets:
+                if t["id"] == str(tweet_id) and t["deleted_at"] is None and t["created_by"] == str(tweet.created_by):
+                    t["content"] = tweet.content
+                    t["updated_at"] = str(datetime.now())
+                    
+                    f.seek(0)
+                    f.write(json.dumps(tweets))
+                    f.close()
+
+                    return Tweet(id=t["id"], 
+                                content=t["content"], 
+                                created_by=t["created_by"], 
+                                created_at=t["created_at"], 
+                                updated_at=t["updated_at"], 
+                                deleted_at=t["deleted_at"]
+                            )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Tweet not found",
+        headers={"X-Error": "Tweet not found"}
+    )
+
 
 
 ### Delete a Tweet
@@ -456,20 +545,49 @@ def update_a_tweet():
     summary="Delete a Tweet",
     tags=["Tweets"],
 )
-def delete_a_tweet():
-    pass
-'''
+def delete_a_tweet(
+    tweet_id: UUID = Path(...),
+    user_id: UUID = Body(...)
+    ):
+    """
+    **DELETE A TWEET**  
+    This path operation delete a active tweet in the app.  
 
-'''
-if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host=str(HOST),
-        port=int(PORT),
-        workers=2,
-        log_level="info",
-        reload=True,
-        debug=bool(DEBUG),
+    **Parameters:**  
+        - Path parameter  
+        - **tweet_id:** uuid  
+        - **user_id:** uuid
+    
+    **Return:**  
+        - **id:** uuid  
+        - **content:** str  
+        - **created_by:** uuid  
+        - **created_at:** datetime  
+        - **updated_at:** datetime  
+        - **deleted_at:** datetime
+    """
+    with open("tweets.json", "r+", encoding="utf-8") as f:
+        tweets = json.loads(f.read())
+
+        if len(tweets) > 0:
+            for t in tweets:
+                if t["id"] == str(tweet_id) and t["deleted_at"] is None and t["created_by"] == str(user_id):
+                    t["deleted_at"] = str(datetime.now())
+                    
+                    f.seek(0)
+                    f.write(json.dumps(tweets))
+                    f.close()
+
+                    return Tweet(id=t["id"], 
+                                content=t["content"], 
+                                created_by=t["created_by"], 
+                                created_at=t["created_at"], 
+                                updated_at=t["updated_at"], 
+                                deleted_at=t["deleted_at"]
+                            )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Tweet not found",
+        headers={"X-Error": "Tweet not found"}
     )
-    print("Starting server...")
-'''
